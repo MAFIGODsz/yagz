@@ -63,11 +63,34 @@ export function Typewriter({
   const shown = text.slice(0, count);
   const rest = text.slice(count);
 
+  // ─── FIX WEBKIT background-clip:text ────────────────────────────────────
+  // .text-gradient usa background-clip:text. No WebKit (Safari / Chrome mobile)
+  // o clip do gradiente âncora em TODOS os descendentes, inclusive os que têm
+  // visibility:hidden — tornando o placeholder "rest" visível e revelando o
+  // texto completo antes do fim da animação.
+  //
+  // Solução: aplicar text-gradient SOMENTE ao span interno de "shown" e colocar
+  // o span "rest" como irmão (sibling) fora do contexto de background-clip.
+  // O wrapper externo mantém as demais classes (italic, etc.) para que ambos
+  // os spans herdem o font-style correto e a reserva de espaço seja fiel.
+  const GRADIENT_CLASS = "text-gradient";
+  const hasGradient = className.includes(GRADIENT_CLASS);
+  // Classes sem text-gradient → vão para o wrapper (ex.: "italic")
+  const wrapperClass = hasGradient
+    ? className.replace(GRADIENT_CLASS, "").trim()
+    : className;
+  // Classes exclusivas do span visível (text-gradient permanece aqui)
+  const shownClass = hasGradient ? GRADIENT_CLASS : "";
+
   return (
-    <span className={className} aria-label={text}>
-      <span aria-hidden="true">{shown}</span>
-      {caret && !done && <span className="tw-caret" aria-hidden="true" />}
-      {/* reserva o espaço do texto completo (sem layout shift) */}
+    <span className={wrapperClass} aria-label={text}>
+      {/* Apenas o texto já revelado recebe o gradiente */}
+      <span aria-hidden="true" className={shownClass}>
+        {shown}
+        {caret && !done && <span className="tw-caret" aria-hidden="true" />}
+      </span>
+      {/* Placeholder fora do contexto background-clip:text → visibility:hidden
+          funciona corretamente em todos os navegadores / mobile */}
       <span aria-hidden="true" className="invisible">
         {rest}
       </span>
